@@ -1,12 +1,10 @@
-package routing
+package main
 
 import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
 
-	"github.com/XessiveObserver/zoo/db"
-	"github.com/XessiveObserver/zoo/model"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 )
@@ -15,7 +13,7 @@ import (
 func GetAnimals(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	w.Header().Set("Content-Type", "application/json")
 
-	rows, err := db.DB.Query("SELECT * FROM animalias")
+	rows, err := DB.Query("SELECT * FROM animalias")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -23,9 +21,9 @@ func GetAnimals(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 
 	defer rows.Close()
 
-	var animals []model.Animal
+	var animals []Animal
 	for rows.Next() {
-		var animal model.Animal
+		var animal Animal
 		if err := rows.Scan(&animal.ID, &animal.Name, &animal.Kind, &animal.Diet); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -45,8 +43,8 @@ func GetAnimal(w http.ResponseWriter, _ *http.Request, ps httprouter.Params) {
 		return
 	}
 
-	var animal model.Animal
-	err = db.DB.QueryRow("SELECT * FROM animalias WHERE id = $1", id).Scan(&animal.ID, &animal.Name, &animal.Kind, &animal.Diet)
+	var animal Animal
+	err = DB.QueryRow("SELECT * FROM animalias WHERE id = $1", id).Scan(&animal.ID, &animal.Name, &animal.Kind, &animal.Diet)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Animal not found", http.StatusNotFound)
@@ -62,11 +60,11 @@ func GetAnimal(w http.ResponseWriter, _ *http.Request, ps httprouter.Params) {
 func CreateAnimal(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var animal model.Animal
+	var animal Animal
 	_ = json.NewDecoder(r.Body).Decode(&animal)
 
 	// Insert new animal into database
-	_, err := db.DB.Exec("INSERT INTO animalias (id, name, kind, diet) VALUES ($1, $2, $3, $4)", animal.ID, animal.Name, animal.Kind, animal.Diet)
+	_, err := DB.Exec("INSERT INTO animalias (id, name, kind, diet) VALUES ($1, $2, $3, $4)", animal.ID, animal.Name, animal.Kind, animal.Diet)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -85,11 +83,11 @@ func UpdateAnimal(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 		return
 	}
 
-	var animal model.Animal
+	var animal Animal
 	_ = json.NewDecoder(r.Body).Decode(&animal)
 
 	// Upadate the animal in the database
-	_, err = db.DB.Exec("UPDATE animalias SET name = $1, kind = $2, diet = $3 WHERE id = $4", animal.Name, animal.Kind, animal.Diet, id)
+	_, err = DB.Exec("UPDATE animalias SET name = $1, kind = $2, diet = $3 WHERE id = $4", animal.Name, animal.Kind, animal.Diet, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -109,8 +107,8 @@ func DeleteAnimal(w http.ResponseWriter, _ *http.Request, ps httprouter.Params) 
 		return
 	}
 
-	var animal model.Animal
-	err = db.DB.QueryRow("DELETE FROM animalias WHERE id = $1 RETURNING id, name, kind, diet", id).Scan(&animal.ID, &animal.Name, &animal.Kind, &animal.Diet)
+	var animal Animal
+	err = DB.QueryRow("DELETE FROM animalias WHERE id = $1 RETURNING id, name, kind, diet", id).Scan(&animal.ID, &animal.Name, &animal.Kind, &animal.Diet)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Employee not found", http.StatusNotFound)
